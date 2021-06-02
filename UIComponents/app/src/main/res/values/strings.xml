@@ -1,0 +1,29 @@
+<resources>
+    <string name="app_name">UIComponents</string>
+    <string name="tv_msg">input your name.</string>
+    <string name="bt_save">save</string>
+    <string name="cb_drink">drink</string>
+    <string name="cb_food">food</string>
+    <string name="rb_male">male</string>
+    <string name="rb_female">female</string>
+    <string-array name="sp_currylist">
+        <item>dry curry</item>
+        <item>cutlet curry</item>
+        <item>beef curry</item>
+        <item>chicken curry</item>
+        <item>seafood curry</item>
+        <item>Keema curry</item>
+        <item>green curry</item>
+    </string-array>
+    <string-array name="lv_cocktaillist">
+        <item>white lady</item>
+        <item>Balalaika</item>
+        <item>XYZ</item>
+        <item>New York</item>
+        <item>Manhattan</item>
+        <item>Mississippi Mule</item>
+        <item>Blue Hawaii</item>
+        <item>MAI-TAI</item>
+        <item>Martini</item>
+    </string-array>
+</resources>
