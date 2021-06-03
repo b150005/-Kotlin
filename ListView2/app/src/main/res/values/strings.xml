@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">ListView2</string>
+    <string name="dialog_title">confirm</string>
+    <string name="dialog_msg">Check your order.</string>
+    <string name="dialog_btn_ok">Order</string>
+    <string name="dialog_btn_ng">Cancel</string>
+    <string name="dialog_btn_nu">Inquiry</string>
+    <string name="dialog_ok_toast">Thank you for your order.</string>
+    <string name="dialog_ng_toast">We have cancelled your order.</string>
+    <string name="dialog_nu_toast">Tell us what your inquiry is about.</string>
+</resources>

@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">ListView</string>
+    <string-array name="lv_menu">
+        <item>deep-fried</item>
+        <item>hamburg</item>
+        <item>ginger fried</item>
+        <item>steak</item>
+        <item>stir-fried</item>
+        <item>pork cutlet</item>
+        <item>minced meat cutlet</item>
+        <item>croquette</item>
+        <item>chicken cutlet</item>
+        <item>twice cooked pork</item>
+        <item>mapo tofu</item>
+        <item>chop suey</item>
+        <item>fried rice</item>
+        <item>grilled fish</item>
+    </string-array>
+</resources>
