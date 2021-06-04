@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Intent</string>
+    <string name="tv_thx_title">Your order has been completed.</string>
+    <string name="tv_thx_desc">We have received your order.</string>
+    <string name="bt_thx_back">Back</string>
+</resources>

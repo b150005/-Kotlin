@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">LifeCycle</string>
+    <string name="bt_next">Show next view</string>
+    <string name="bt_prev">Show previous view</string>
+</resources>

@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">ConstraintLayoutSample</string>
+    <string name="tv_title">Input your information.</string>
+    <string name="tv_name">Name</string>
+    <string name="tv_mail">Mail-Address</string>
+    <string name="tv_comment">Inquiry</string>
+    <string name="bt_confirm">Confirm</string>
+    <string name="bt_send">Send</string>
+    <string name="bt_clear">Clear</string>
+</resources>
