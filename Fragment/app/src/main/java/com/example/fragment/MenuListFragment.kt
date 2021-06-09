@@ -109,27 +109,39 @@ class MenuListFragment : Fragment() {
             val menuName = item["name"]
             val menuPrice = item["price"]
 
+            // Bundleオブジェクトの生成
             val bundle = Bundle()
 
+            // Bundleオブジェクトへのデータ格納
             bundle.putString("menuName", menuName)
             bundle.putString("menuPrice", menuPrice)
 
+            // 10-inchの画面である場合
             if (_isLayoutXLarge) {
 
-                // FragmentTransactionオブジェクトの取得
+                // フラグメントトランザクションの編集開始
                 // FragmentTransaction: フラグメントトランザクションの制御を行うクラス
                 // FragmentManager?.beginTransaction(): FragmentTransactionオブジェクトの取得
                 val transaction = fragmentManager?.beginTransaction()
 
-                // 追加するフラグメントの生成
+                // 追加するフラグメントオブジェクトの生成
                 val menuThanksFragment = MenuThanksFragment()
 
+                // 追加するフラグメントのargumentsプロパティにBundleオブジェクトを代入
+                // -> 追加フラグメントではargumentsプロパティを用いてデータを取得
                 menuThanksFragment.arguments = bundle
 
+                // フラグメントの置換
+                // FragmentTransaction?.replace(containerViewId:fragment:): フラグメントの置換
+                // containerViewId: 置換先レイアウト部品のID(R値)
+                // fragment: 置換するフラグメントオブジェクト
                 transaction?.replace(R.id.menuThanksFrame, menuThanksFragment)
 
+                // 編集したフラグメントトランザクションを反映(コミット)
+                // FragmentTransaction?.commit(): フラグメントトランザクションの編集を反映
                 transaction?.commit()
             }
+            // 10-inchの画面でない場合
             else {
                 // 画面遷移を実現するIntentオブジェクトの生成
                 // Intent(packageContext:cls:): Intentオブジェクトの生成

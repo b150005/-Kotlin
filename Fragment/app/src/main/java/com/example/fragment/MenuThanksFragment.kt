@@ -39,10 +39,14 @@ class MenuThanksFragment : Fragment() {
         // インフレートしたビュー
         val view = inflater.inflate(R.layout.fragment_menu_thanks, container, false)
 
+        // データが格納されるBundleオブジェクト
         val extras: Bundle?
 
         // 10-inchの画面である場合
         if (_isLayoutXLarger) {
+            // Bundleオブジェクトにデータを格納
+            // arguments: データが格納されたBundleオブジェクト
+            // <- 追加元でargumentsプロパティにデータを格納済み
             extras = arguments
         }
         // 10-inchの画面でない場合
@@ -54,12 +58,12 @@ class MenuThanksFragment : Fragment() {
             //    activityプロパティ(Nullable型)を中継してintentプロパティを利用
             val intent = activity?.intent
 
-            // Intentオブジェクトに格納されたキーと値を格納するMap
-            // extras: Bundleオブジェクト(Intentクラスのプロパティ)
+            // データが格納されたBundleオブジェクト
+            // extras: Intentオブジェクトに格納されたキーと値を格納するBundleオブジェクト
             extras = intent?.extras
         }
 
-        // キーを指定して取得する値
+        // キーを指定して値を取得
         val menuName = extras?.getString("menuName")
         val menuPrice = extras?.getString("menuPrice")
 
@@ -88,7 +92,7 @@ class MenuThanksFragment : Fragment() {
             // 10-inchの画面である場合
             if (_isLayoutXLarger) {
 
-                // FragmentTransactionオブジェクトの取得
+                // フラグメントトランザクションの編集開始
                 // FragmentTransaction: フラグメントトランザクションの制御を行うクラス
                 // FragmentManager?.beginTransaction(): FragmentTransactionオブジェクトの取得
                 val transaction = fragmentManager?.beginTransaction()
@@ -98,6 +102,8 @@ class MenuThanksFragment : Fragment() {
                 // fragment: 削除するフラグメント
                 transaction?.remove(this@MenuThanksFragment)
 
+                // 編集したフラグメントトランザクションを反映(コミット)
+                // FragmentTransaction?.commit(): フラグメントトランザクションの編集を反映
                 transaction?.commit()
             }
             // 10-inchの画面でない場合

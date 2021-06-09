@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">Database</string>
+    <string-array name="lv_itemlist">
+        <item>item 1</item>
+        <item>item 2</item>
+        <item>item 3</item>
+        <item>item 4</item>
+        <item>item 5</item>
+        <item>item 6</item>
+        <item>item 7</item>
+        <item>item 8</item>
+        <item>item 9</item>
+        <item>item 10</item>
+    </string-array>
+    <string name="tv_lb_item">Selected Item: </string>
+    <string name="tv_item">Unselected</string>
+    <string name="tv_lb_note">Note: </string>
+    <string name="btn_save">Save</string>
+</resources>
