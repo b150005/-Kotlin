@@ -24,15 +24,18 @@ class DatabaseHelper(context: Context): SQLiteOpenHelper(
 
     // private定数の定義
     companion object {
-        // データベース名
+        // DB名
         private const val DATABASE_NAME = "itemmemo.db"
-        // データベースのバージョン番号
+        // 生成時のDBバージョン番号
         private const val DATABASE_VERSION = 1
     }
 
-    // SQLiteDatabaseの初期化時に実行される処理
+    // 初期化時に実行される処理
+    // -> DatabaseHelperクラスの初期化と同時に、
+    //    保持しているSQLiteDatabaseオブジェクトを通じてSQLiteデータベースを生成
     override fun onCreate(db: SQLiteDatabase?) {
         // DDL文
+        // -> 改行によって可読性を高めるため、append()ができるStringBuilderを用いる
         // StringBuilder: 文字列を格納する(同一ポインタ内での)可変配列を定義するクラス
         val sb = StringBuilder()
 
