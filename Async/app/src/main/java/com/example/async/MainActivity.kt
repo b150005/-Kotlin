@@ -25,10 +25,11 @@ import java.util.concurrent.Executors
 class MainActivity : AppCompatActivity() {
 
     // private定数
+    // -> 変更の可能性がない部分は定数として定義
     companion object {
         // ログに記載するタグ文字列
         private const val DEBUG_TAG = "Async"
-        // 天候情報のURL
+        // 天候情報のURL共通部分
         private const val WEATHERINFO_URL = "https://api.openweathermap.org/data/2.5/weather?lang=ja"
         // APIキー
         private const val APP_ID = "2243f50c3b5e4bd5689ce9642a3c436b"
@@ -47,10 +48,10 @@ class MainActivity : AppCompatActivity() {
         // 表示するListView
         val lvCityList = findViewById<ListView>(R.id.lvCityList)
 
-        // 表示するリストデータ
+        // 表示するリストデータのキーを格納した配列
         val from = arrayOf("name")
 
-        // リストデータを表示するTextView
+        // リストデータを表示するTextViewのIDを格納したInt型配列
         val to = intArrayOf(android.R.id.text1)
 
         // リストデータとListViewを紐づけるAdapterオブジェクト
@@ -75,6 +76,8 @@ class MainActivity : AppCompatActivity() {
         var list: MutableList<MutableMap<String, String>> = mutableListOf()
 
         // リストデータ
+        // "name": ListViewに表示する都市名
+        // "q": URLに挿入する都市名
         var city = mutableMapOf("name" to "Osaka", "q" to "Osaka")
         list.add(city)
         city = mutableMapOf("name" to "Kobe", "q" to "Kobe")
@@ -94,61 +97,98 @@ class MainActivity : AppCompatActivity() {
         return list
     }
 
+    // "タップ"イベントを検知するリスナクラス
+    private inner class ListItemClickListener: AdapterView.OnItemClickListener {
+        // "タップ"イベント検知時の処理(イベントハンドラ)
+        override fun onItemClick(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+
+            // "タップ"されたItem
+            val item = _list.get(position)
+            // "タップ"されたItemの都市名
+            val q = item.get("q")
+
+            // qがnullでない場合の処理
+            q?.let {
+                // 取得する天候情報のURL
+                val urlFull = "$WEATHERINFO_URL&q=$q&appid=$APP_ID"
+
+                // URLを基に天候情報を取得
+                receiveWeatherInfo(urlFull)
+            }
+        }
+    }
+
     // URL情報を基にした天候情報の取得処理
+    // -> UIスレッドで動作することを明示的に記述(@UiThreadアノテーション)
+    // => 異なるスレッドで動作する場合はコンパイル時にエラーが発生
     @UiThread
     private fun receiveWeatherInfo(urlFull: String) {
 
-        // Handlerオブジェクトの生成
-        // Handler: スレッド間の通信を行うクラス
-        // mainLooper: アクティビティがもつLooperオブジェクト
-        // Looper:
+        // UIスレッドで動作する処理を管理するHandlerオブジェクトの生成
+        // Handler: 特定のスレッドで動作させる処理(=Runnableオブジェクト)を
+        //          Looperに管理させるクラス
+        // mainLooper: アクティビティ(=UIスレッド)がもつLooperオブジェクト
+        // Looper: 特定のスレッド内での処理を管理するクラス
         val handler = HandlerCompat.createAsync(mainLooper)
 
         // 非同期でWeb APIにアクセスするオブジェクト
+        // -> ワーカースレッドで動作させるRunnableオブジェクト
         val backgroundReceiver = WeatherInfoBackgroundReceiver(handler, urlFull)
 
-        // 別スレッドで動作するインスタンス
-        // Executors.newSingleThreadExecutor():
-        // -> 別スレッドで動作するインスタンス(ExecutorServiceインスタンス)の生成
-        // Executors:
-        // Executor:
+        // 1スレッド追加したスレッドプールをもつExecutorServiceプロパティ
+        // Executors.newSingleThreadExecutor(): スレッドプールに新規スレッドを追加
+        // Executors: ExecutorServiceのファクトリクラス
+        // Executor: スレッドプールでの処理実行メソッドを抽象的に定義したインタフェース
         val executeService = Executors.newSingleThreadExecutor()
 
-        // 別スレッドでの処理(=非同期処理)の実行
+        // 非同期処理の開始
+        // ExecutorService.submit(task:): スレッドプールにRunnableオブジェクトを送信
+        // -> 待機状態である新規作成したスレッドが処理を実行
         executeService.submit(backgroundReceiver)
     }
 
     // 非同期でWeb APIにアクセスするクラス
-    // -> Runnableインスタンスを実装するクラス
-    // Runnable: ~~するインタフェース
+    // -> 非同期処理を行うRunnableオブジェクトを定義するクラス
+    // Runnable: 特定スレッド内で行う処理の自動実行メソッド(=run())を抽象的に定義したインタフェース
+    // -> Runnableインタフェースを実装するクラスではrun()のオーバーライドが必須
     private inner class WeatherInfoBackgroundReceiver(handler: Handler, url: String): Runnable {
 
-        // Handlerオブジェクト
-        // -> スレッドセーフで定義
+        // クラス内で扱うHandlerオブジェクト(=Handlerプロパティ)
+        // -> クラス内での書き換えが発生しないよう、スレッドセーフ(読み込み専用のval)で定義
         private val _handler = handler
 
-        // 天候情報のURL
+        // 選択した都市の天候情報のURLオブジェクト(=URLプロパティ)
         private val _url = url
 
         // Web APIへのアクセス処理
+        // -> ワーカースレッドで動作することを明示的に記述(@WorkerThreadアノテーション)
+        // => 異なるスレッドで動作する場合はコンパイル時にエラーが発生
+        // -> run()メソッドはスレッドプールによって自動的に実行される
         @WorkerThread
         override fun run() {
 
-            // Web API空取得したJSON文字列
-            // -> 空文字で初期化
+            // Web APIを通じて取得するJSON文字列
+            // -> エラーに備えて空文字で初期化
             var result = ""
 
             // URLオブジェクト
+            // String型 → URL型 への変換
             val url = URL(_url)
 
             // HttpURLConnectionオブジェクト
+            // URL型 (→ URLConnection) → HttpURLConnection型 への変換
             // HttpURLConnection: HTTP接続を行うクラス
             val con = url.openConnection() as? HttpURLConnection
 
             // HttpURLConnectionオブジェクトがnullでない場合の処理
+            // -> let関数ブロック内では、nullチェック対象(=con)がitで置換
             con?.let {
-                //
+
+                // 例外処理(エラーハンドリング)
+                // 例外が発生する可能性があるブロック
                 try {
+                    // -- HTTP接続設定の定義開始 --
+
                     // 接続がタイムアウトするまでの時間[ミリ秒]
                     // -> タイムアウトした場合はSocketTimeoutExceptionが発生
                     it.connectTimeout = 1000
@@ -160,23 +200,31 @@ class MainActivity : AppCompatActivity() {
                     // HTTP接続メソッドの指定
                     it.requestMethod = "GET"
 
+                    // -- HTTP接続設定の定義終了 --
+
                     // HTTP接続の実行
-                    // -> 接続時、HttpURLConnectionオブジェクトの
-                    //    inputStreamプロパティにレスポンスデータが自動的に格納
+                    // ->場合によってSocketTimeoutExceptionまたはIOExceptionが発生
+                    // -> 接続時、HttpURLConnectionオブジェクトのinputStreamプロパティに
+                    //    InputStream型のレスポンスデータが自動的に格納
+                    // InputStream: 読み込み専用の入力データを抽象的に定義するクラス
                     it.connect()
 
                     // HttpURLConnectionオブジェクトによるレスポンスデータの取得
                     val stream = it.inputStream
 
-                    // レスポンスデータをString型に変換
+                    // InputStream型のレスポンスデータをString型に変換
                     result = is2String(stream)
 
                     // InputStreamオブジェクトの解放
                     stream.close()
                 }
-                // エラーハンドリング
+                // 例外が発生した場合のエラー処理
                 catch (ex: SocketTimeoutException) {
-                    // EventLogに出力
+                    // Logcatに出力
+                    // Log.w(tag:msg:tr): WARNレベルのログメッセージをLogcatに出力
+                    // tag: ログに記載するタグ
+                    // msg: ログに記載するメッセージ
+                    // ex: ログに記載する例外
                     Log.w(DEBUG_TAG, "Connection Timed Out.", ex)
                 }
 
@@ -184,51 +232,28 @@ class MainActivity : AppCompatActivity() {
                 it.disconnect()
             }
 
-            // 非同期処理の終了時にUIスレッドで処理を行うクラスのオブジェクト
+            // 非同期処理の終了後にUIスレッドで行う処理(Runnableオブジェクト)
             val postExecutor = WeatherInfoPostExecutor(result)
 
-            // 非同期処理の終了時にHandlerオブジェクトをUIスレッドのクラスオブジェクトに送信
+            // UIスレッドでの続行処理をUIスレッドHandlerのLooperに送信
             _handler.post(postExecutor)
         }
     }
 
-    // レスポンスデータをString型に変換する処理
-    private fun is2String(stream: InputStream?): String {
-        //
-        val sb = StringBuilder()
-
-        //
-        val reader = BufferedReader(InputStreamReader(stream, "UTF-8"))
-
-        //
-        var line = reader.readLine()
-
-        //
-        while (line != null) {
-            //
-            sb.append(line)
-
-            //
-            line = reader.readLine()
-        }
-
-        //
-        reader.close()
-
-        //
-        return sb.toString()
-    }
-
-    // 非同期処理の終了後にUIスレッドで動作する処理を定義するクラス
+    // 非同期処理の終了後にUIスレッドで動作する処理(→JSON解析)を定義するクラス
     // -> コンストラクタにWeb APIで取得したJSONデータをセット
     private inner class WeatherInfoPostExecutor(result: String) : Runnable {
 
         // Web APIから取得したJSON文字列
         private val _result = result
 
-        // UIスレッド(メインスレッド)で行う処理
+        // JSON解析処理
+        // -> UIスレッドで動作することを明示的に記述(@UiThreadアノテーション)
+        // => 異なるスレッドで動作する場合はコンパイル時にエラーが発生
+        // -> run()メソッドはHandlerによって自動的に実行される
         @UiThread
         override fun run() {
+
             // ルートJSONオブジェクト
             // JSONObject:　JSONデータをもつオブジェクト
             val rootJSON = JSONObject(_result)
@@ -270,23 +295,34 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // "タップ"イベントを検知するリスナクラス
-    private inner class ListItemClickListener: AdapterView.OnItemClickListener {
-        // "タップ"イベント検知時の処理(イベントハンドラ)
-        override fun onItemClick(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+    // InputStream型 → String型 への変換処理
+    private fun is2String(stream: InputStream?): String {
 
-            // "タップ"されたItem
-            val item = _list.get(position)
-            // "タップ"されたItemの都市名
-            val q = item.get("q")
+        // StringBuilderオブジェクト
+        // StringBuilder: 文字列を格納する(同一ポインタ内での)可変配列を定義するクラス
+        val sb = StringBuilder()
 
-            q?.let {
-                // 取得する天候情報のURL
-                val urlFull = "$WEATHERINFO_URL&q=$q&appid=$APP_ID"
+        //　Byteデータ → 文字データ への変換
+        val reader = BufferedReader(InputStreamReader(stream, "UTF-8"))
 
-                // URLを基に天候情報を取得
-                receiveWeatherInfo(urlFull)
-            }
+        // 1行分の文字データ
+        // -> 1行目の読み込み
+        var line = reader.readLine()
+
+        // 最終行までループさせる処理
+        while (line != null) {
+
+            // 読み込んだ1行分の文字データをStringBuilderオブジェクトに格納
+            sb.append(line)
+
+            // 次の行を読み込む
+            line = reader.readLine()
         }
+
+        // BufferedReaderオブジェクトの解放
+        reader.close()
+
+        // 読み込んだ文字データ(StringBuilder型)をString型に変換
+        return sb.toString()
     }
 }
