@@ -1,8 +1,7 @@
-package com.example.async
+package com.example.asynccoroutine
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.os.Handler
 import android.util.Log
 import android.view.View
 import android.widget.AdapterView
@@ -11,7 +10,10 @@ import android.widget.SimpleAdapter
 import android.widget.TextView
 import androidx.annotation.UiThread
 import androidx.annotation.WorkerThread
-import androidx.core.os.HandlerCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStream
@@ -20,7 +22,6 @@ import java.lang.StringBuilder
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.URL
-import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
 
@@ -32,7 +33,7 @@ class MainActivity : AppCompatActivity() {
         // 天候情報のURL共通部分
         private const val WEATHERINFO_URL = "https://api.openweathermap.org/data/2.5/weather?lang=ja"
         // APIキー
-        private const val APP_ID = "<APIキー>"
+        private const val APP_ID = "2243f50c3b5e4bd5689ce9642a3c436b"
     }
 
     // リストデータを格納するリスト
@@ -118,62 +119,54 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // URL情報を基にした天候情報の取得処理
-    // -> UIスレッドで動作することを明示的に記述(@UiThreadアノテーション)
-    // => 異なるスレッドで動作する場合はコンパイル時にエラーが発生
+    // UIスレッドで動作する非同期処理を含む処理ブロック
     @UiThread
     private fun receiveWeatherInfo(urlFull: String) {
 
-        // UIスレッドで動作する処理を管理するHandlerオブジェクトの生成
-        // Handler: 特定のスレッドで動作させる処理(=Runnableオブジェクト)を
-        //          Looperに管理させるクラス
-        // mainLooper: アクティビティ(=UIスレッド)がもつLooperオブジェクト
-        // Looper: 特定のスレッド内での処理を管理するクラス
-        val handler = HandlerCompat.createAsync(mainLooper)
+        // コルーチンスコープによるコルーチンの起動
+        // CoroutineScope.launch(context:start:block:): コルーチンの起動
+        // context: コルーチンスコープへの追加コンテキスト
+        // -> 未指定の場合はDispatchers.Default(コルーチンスコープから継承)
+        // start: コルーチンの開始タイミング(CoroutineStartクラス定数)
+        // -> 未指定の場合はCoroutineStart.Default(即時実行)
+        // block: 起動するコルーチン
+        lifecycleScope.launch {
 
-        // 非同期でWeb APIにアクセスするオブジェクト
-        // -> ワーカースレッドで動作させるRunnableオブジェクト
-        val backgroundReceiver = WeatherInfoBackgroundReceiver(handler, urlFull)
+            // @WorkerThread
+            // Web APIへのアクセス、String型レスポンスデータの取得
+            val result = weatherInfoBackgroundRunner(urlFull)
 
-        // 1スレッド追加したスレッドプールをもつExecutorServiceプロパティ
-        // Executors.newSingleThreadExecutor(): スレッドプールに新規スレッドを追加
-        // Executors: ExecutorServiceのファクトリクラス
-        // Executor: スレッドプールでの処理実行メソッドを抽象的に定義したインタフェース
-        val executeService = Executors.newSingleThreadExecutor()
-
-        // 非同期処理の開始
-        // ExecutorService.submit(task:): スレッドプールにRunnableオブジェクトを送信
-        // -> 待機状態である新規作成したスレッドが処理を実行
-        executeService.submit(backgroundReceiver)
+            // @UiThread
+            // String型レスポンスデータ(JSONデータ)の解析、TextViewへの反映
+            weatherInfoPostRunner(result)
+        }
     }
 
-    // 非同期でWeb APIにアクセスするクラス
-    // -> 非同期処理を行うRunnableオブジェクトを定義するクラス
-    // Runnable: 特定スレッド内で行う処理の自動実行メソッド(=run())を抽象的に定義したインタフェース
-    // -> Runnableインタフェースを実装するクラスではrun()のオーバーライドが必須
-    private inner class WeatherInfoBackgroundReceiver(handler: Handler, url: String): Runnable {
+    // Web APIへのアクセス処理
+    // -> ワーカースレッドで動作することを明示的に記述(@WorkerThreadアノテーション)
+    // => 異なるスレッドで動作する場合はコンパイル時にエラーが発生
+    // -> run()メソッドはスレッドプールによって自動的に実行される
+    // suspend:　実行中は元スレッド(=UIスレッド)の他の処理を中断させる
+    // <- withContext()メソッドが内部的にsuspendキーワードを保持しているため、
+    //    withContext()メソッドを導入する場合は導入したメソッドにもsuspendキーワードを記述
+    @WorkerThread
+    private suspend fun weatherInfoBackgroundRunner(url: String): String {
 
-        // クラス内で扱うHandlerオブジェクト(=Handlerプロパティ)
-        // -> クラス内での書き換えが発生しないよう、スレッドセーフ(読み込み専用のval)で定義
-        private val _handler = handler
-
-        // 選択した都市の天候情報のURLオブジェクト(=URLプロパティ)
-        private val _url = url
-
-        // Web APIへのアクセス処理
-        // -> ワーカースレッドで動作することを明示的に記述(@WorkerThreadアノテーション)
-        // => 異なるスレッドで動作する場合はコンパイル時にエラーが発生
-        // -> run()メソッドはスレッドプールによって自動的に実行される
-        @WorkerThread
-        override fun run() {
-
+        // ワーカースレッドでの処理
+        // withContext(context:block:): スレッドを分離して処理を実行
+        // context: 分離先スレッド(Dispatchersクラス定数を利用)
+        // -> Dispatchers.Main: メインスレッド(=UIスレッド)
+        //    Dispatchers.IO: I/Oスレッド(=ワーカースレッド)
+        // block: 他の処理を中断させながらスレッドを分離して実行する処理
+        // -> ラムダ式(返り値にreturnを記述しない)で記述
+        val returnVal = withContext(Dispatchers.IO) {
             // Web APIを通じて取得するJSON文字列
             // -> エラーに備えて空文字で初期化
             var result = ""
 
             // URLオブジェクト
             // String型 → URL型 への変換
-            val url = URL(_url)
+            val url = URL(url)
 
             // HttpURLConnectionオブジェクト
             // URL型 (→ URLConnection) → HttpURLConnection型 への変換
@@ -232,67 +225,60 @@ class MainActivity : AppCompatActivity() {
                 it.disconnect()
             }
 
-            // 非同期処理の終了後にUIスレッドで行う処理(Runnableオブジェクト)
-            val postExecutor = WeatherInfoPostExecutor(result)
-
-            // UIスレッドでの続行処理をUIスレッドHandlerのLooperに送信
-            _handler.post(postExecutor)
+            // String型のレスポンスデータを返却
+            result
         }
+
+        // withContext()メソッドで返却されたString型レスポンスデータを返却
+        return returnVal
+
     }
 
-    // 非同期処理の終了後にUIスレッドで動作する処理(→JSON解析)を定義するクラス
-    // -> コンストラクタにWeb APIで取得したJSONデータをセット
-    private inner class WeatherInfoPostExecutor(result: String) : Runnable {
+    // JSON解析処理
+    // -> UIスレッドで動作することを明示的に記述(@UiThreadアノテーション)
+    // => 異なるスレッドで動作する場合はコンパイル時にエラーが発生
+    // -> run()メソッドはHandlerによって自動的に実行される
+    @UiThread
+    private fun weatherInfoPostRunner(result: String) {
 
-        // Web APIから取得したJSON文字列
-        private val _result = result
+        // ルートJSONオブジェクト
+        // JSONObject:　JSONデータをもつオブジェクト
+        val rootJSON = JSONObject(result)
 
-        // JSON解析処理
-        // -> UIスレッドで動作することを明示的に記述(@UiThreadアノテーション)
-        // => 異なるスレッドで動作する場合はコンパイル時にエラーが発生
-        // -> run()メソッドはHandlerによって自動的に実行される
-        @UiThread
-        override fun run() {
+        // 都市名
+        val cityName = rootJSON.getString("name")
 
-            // ルートJSONオブジェクト
-            // JSONObject:　JSONデータをもつオブジェクト
-            val rootJSON = JSONObject(_result)
+        // 経緯度が格納されたJSONオブジェクト
+        val coordJSON = rootJSON.getJSONObject("coord")
 
-            // 都市名
-            val cityName = rootJSON.getString("name")
+        // 緯度
+        val latitude = coordJSON.getString("lat")
 
-            // 経緯度が格納されたJSONオブジェクト
-            val coordJSON = rootJSON.getJSONObject("coord")
+        // 経度
+        val longitude = coordJSON.getString("lon")
 
-            // 緯度
-            val latitude = coordJSON.getString("lat")
+        // 天候情報が格納されたJSON配列オブジェクト
+        val weatherJSONArray = rootJSON.getJSONArray("weather")
 
-            // 経度
-            val longitude = coordJSON.getString("lon")
+        // 現在の天候情報が格納されたJSONオブジェクト
+        val weatherJSON = weatherJSONArray.getJSONObject(0)
 
-            // 天候情報が格納されたJSON配列オブジェクト
-            val weatherJSONArray = rootJSON.getJSONArray("weather")
+        // 現在の天候情報
+        val weather = weatherJSON.getString("description")
 
-            // 現在の天候情報が格納されたJSONオブジェクト
-            val weatherJSON = weatherJSONArray.getJSONObject(0)
+        // 取得した都市名を埋め込んだ文字列
+        val telop = "Weather for ${cityName}"
 
-            // 現在の天候情報
-            val weather = weatherJSON.getString("description")
+        // 取得した天候情報を埋め込んだ文字列
+        val desc = "The weather now is ${weather}. \nIt is located approximately at lat. ${latitude} and at long. ${longitude}."
 
-            // 取得した都市名を埋め込んだ文字列
-            val telop = "Weather for ${cityName}"
+        // 天候情報を表示するTextView
+        val tvWeatherTelop = findViewById<TextView>(R.id.tvWeatherTelop)
+        val tvWeatherDesc = findViewById<TextView>(R.id.tvWeatherDesc)
 
-            // 取得した天候情報を埋め込んだ文字列
-            val desc = "The weather now is ${weather}. \nIt is located approximately at lat. ${latitude} and at long. ${longitude}."
-
-            // 天候情報を表示するTextView
-            val tvWeatherTelop = findViewById<TextView>(R.id.tvWeatherTelop)
-            val tvWeatherDesc = findViewById<TextView>(R.id.tvWeatherDesc)
-
-            // 天候情報の表示
-            tvWeatherTelop.text = telop
-            tvWeatherDesc.text = desc
-        }
+        // 天候情報の表示
+        tvWeatherTelop.text = telop
+        tvWeatherDesc.text = desc
     }
 
     // InputStream型 → String型 への変換処理
