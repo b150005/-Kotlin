@@ -33,7 +33,7 @@ class MainActivity : AppCompatActivity() {
         // 天候情報のURL共通部分
         private const val WEATHERINFO_URL = "https://api.openweathermap.org/data/2.5/weather?lang=ja"
         // APIキー
-        private const val APP_ID = "2243f50c3b5e4bd5689ce9642a3c436b"
+        private const val APP_ID = "<APIキー>"
     }
 
     // リストデータを格納するリスト
