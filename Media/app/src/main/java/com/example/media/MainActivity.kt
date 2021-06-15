@@ -4,10 +4,12 @@ import android.media.MediaPlayer
 import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.CompoundButton
 import com.google.android.material.switchmaterial.SwitchMaterial
+import java.util.*
 
 class MainActivity : AppCompatActivity() {
 
@@ -23,7 +25,7 @@ class MainActivity : AppCompatActivity() {
         // MediaPlayerオブジェクトの生成
         _player = MediaPlayer()
 
-        // Loopスイッチ
+        // Loopスイッチ(トグルスイッチ)
         val loopSwitch = findViewById<SwitchMaterial>(R.id.swLoop)
 
         // メディアファイルのURI文字列
@@ -48,7 +50,7 @@ class MainActivity : AppCompatActivity() {
             it.prepareAsync()
         }
 
-        // スイッチをリスナとしてセット
+        // トグルスイッチをリスナとしてセット
         loopSwitch.setOnCheckedChangeListener(LoopSwitchChangedListener())
     }
 
@@ -173,11 +175,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    //
+    // ループスイッチの"状態遷移"イベントを検知するリスナクラス
     private inner class LoopSwitchChangedListener: CompoundButton.OnCheckedChangeListener {
-        //
+        // "状態遷移"イベント検知時の処理
         override fun onCheckedChanged(buttonView: CompoundButton?, isChecked: Boolean) {
-            //
+            // ループ機能の変更
             _player?.isLooping = isChecked
         }
     }

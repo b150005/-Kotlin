@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Service</string>
+    <string name="bt_play_play">Play</string>
+    <string name="bt_play_stop">Stop</string>
+    <string name="msg_notification_title_start">Start</string>
+    <string name="msg_notification_text_start">Playback of the audio file has started.</string>
+    <string name="msg_notification_text_finish">Stop</string>
+    <string name="msg_notification_title_finish">Playback has stopped.</string>
+    <string name="notification_channel_name">Service notification</string>
+</resources>
