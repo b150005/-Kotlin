@@ -41,10 +41,12 @@ class SoundManageService : Service() {
         // 通知チャネル
         val channel = NotificationChannel(CHANNEL_ID, name, importance)
 
-        // NotificationManagerオブジェクト
+        // NotificationManagerオブジェクトの取得
         val manager = getSystemService(NotificationManager::class.java)
 
         // 通知チャネルをセット
+        // -> 独自に作成したNotificationChannelオブジェクトは、
+        //    NotificationManager内で再生成する必要がある
         manager.createNotificationChannel(channel)
     }
 
@@ -105,16 +107,20 @@ class SoundManageService : Service() {
             // メディアファイルを再生
             mp?.start()
 
-            // Notificationを作成するBuilderオブジェクト
+            // Notificationオブジェクトを作成するBuilderオブジェクト
             val builder = NotificationCompat.Builder(this@SoundManageService, CHANNEL_ID)
 
             // 通知エリアに表示するアイコン
             builder.setSmallIcon(android.R.drawable.ic_dialog_info)
 
             // 通知ドロワーに表示するタイトル
+            // -> Context.getString(resId:)メソッドを用いてCharSequence型文字列を取得
+            // CharSequence: String型やStringBuilder型で実装されるインタフェース
+            // => String型やStringBuilder型の文字列が利用可能
             builder.setContentTitle(getString(R.string.msg_notification_title_start))
 
             // 通知ドロワーに表示するメッセージ
+            // -> Context.getString(resId:)メソッドを用いてCharSequence型文字列を取得
             builder.setContentText(getString(R.string.msg_notification_text_start))
 
             // 起動先アクティビティを指定するIntentオブジェクトの生成
@@ -123,7 +129,7 @@ class SoundManageService : Service() {
             // Intentオブジェクトにデータを格納
             intent.putExtra("fromNotification", true)
 
-            // PendingIntentオブジェクト
+            // アクティビティを起動するPendingIntentオブジェクト
             val stopServiceIntent = PendingIntent.getActivity(
                 this@SoundManageService,
                 0,
@@ -140,7 +146,7 @@ class SoundManageService : Service() {
             // Notificationオブジェクトの生成
             val notification = builder.build()
 
-            // サービスのフォアグラウンド化
+            // サービスのフォアグラウンド実行
             startForeground(200, notification)
         }
     }
@@ -148,22 +154,24 @@ class SoundManageService : Service() {
     // メディアファイルの"再生完了"イベントを検知するリスナクラス
     private inner class PlayerCompletionListener: MediaPlayer.OnCompletionListener {
         override fun onCompletion(mp: MediaPlayer?) {
-            // Notificationを生成するBuilderオブジェクト
+            // Notificationオブジェクトを生成するBuilderオブジェクト
             val builder = NotificationCompat.Builder(this@SoundManageService, CHANNEL_ID)
 
             // 通知エリアに表示するアイコン
             builder.setSmallIcon(android.R.drawable.ic_dialog_info)
 
             // 通知ドロワーに表示するタイトル
+            // -> Context.getString(resId:)メソッドを用いてCharSequence型文字列を取得
             builder.setContentTitle(getString(R.string.msg_notification_title_finish))
 
             // 通知ドロワーに表示するメッセージ
+            // -> Context.getString(resId:)メソッドを用いてCharSequence型文字列を取得
             builder.setContentText(getString(R.string.msg_notification_text_finish))
 
             // Notificationオブジェクトの生成
             val notification = builder.build()
 
-            // NotificationManagerCompatオブジェクト
+            // サービスクラスからNotificationManagerCompatオブジェクトを取得
             val manager = NotificationManagerCompat.from(this@SoundManageService)
 
             // 通知を実行
