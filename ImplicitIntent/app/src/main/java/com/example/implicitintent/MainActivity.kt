@@ -15,60 +15,70 @@ import java.net.URLEncoder
 
 class MainActivity : AppCompatActivity() {
 
-    // 緯度プロパティ(初期値: 0.0)
+    // 経緯度プロパティ
+    // -> 位置情報が取得できなかった場合に備えて初期値を設定
     private var _latitude = 0.0
-    // 経度プロパティ(初期値: 0.0)
     private var _longitude = 0.0
 
     // FusedLocationProviderClientプロパティ
+    // -> オブジェクトがリソースを大量に消費する場合、
+    //    アクティビティ初期化時にオブジェクトを生成(=初期化)できるよう
+    //    lateinitキーワードを用いて宣言
     private lateinit var _fusedLocationClient: FusedLocationProviderClient
 
     // LocationRequestプロパティ
     private lateinit var _locationRequest: LocationRequest
 
-    //
+    // OnUpdateLocationプロパティ
+    // <- 抽象クラスであるLocationCallbackの実装クラス
     private lateinit var _onUpdateLocation: OnUpdateLocation
 
+    // アクティビティ初期化時に呼び出される処理
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // FusedLocationProviderClientオブジェクトの取得
+        // FusedLocationProviderClientプロパティの初期化
         _fusedLocationClient = LocationServices.getFusedLocationProviderClient(this@MainActivity)
 
-        // LocationRequestオブジェクトの生成
+        // LocationRequestプロパティの初期化
         _locationRequest = LocationRequest.create()
 
-        // LocationRequestオブジェクトがnullでない場合の処理
+        // LocationRequestプロパティがnullでないことを保証
+        // <- lateinitで宣言したオブジェクトのプロパティを変更する場合は
+        //    オブジェクトがnullでないことの保証が推奨
         _locationRequest?.let {
-            //
+
+            // 基本取得間隔[ms]
             it.interval = 5000
 
-            //
+            // 最短取得間隔[ms]
             it.fastestInterval = 1000
 
-            //
+            // 位置情報の取得精度
             it.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
         }
 
-        //
+        // LocationCallbackプロパティの初期化
         _onUpdateLocation = OnUpdateLocation()
     }
 
-    //
+    // アクティビティの表示直前に呼び出される処理
     override fun onResume() {
         super.onResume()
 
-        // ACCESS_FINE_LOCATIONが許可されていない場合の処理
+        // アクティビティによるセルフパーミッションチェックの結果、
+        // 位置情報の利用が許可されていない場合の処理
         if (ActivityCompat.checkSelfPermission(
                 this@MainActivity,
                 Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            //
+
+            // パーミッションチェックを行うパーミッションリスト
             val permissions = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
 
-            //
+            // ユーザに許可を求めるパーミッションダイアログの表示
             ActivityCompat.requestPermissions(
                 this@MainActivity,
                 permissions,
@@ -78,6 +88,10 @@ class MainActivity : AppCompatActivity() {
             // onResume()メソッドの終了
             return
         }
+
+        // アクティビティによるセルフパーミッションチェックの結果、
+        // 位置情報の利用が許可されている場合の処理
+        // -> 位置情報を取得
         _fusedLocationClient.requestLocationUpdates(
             _locationRequest,
             _onUpdateLocation,
@@ -85,55 +99,70 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    override fun onPause() {
-        super.onPause()
-
-        //
-        _fusedLocationClient.removeLocationUpdates(_onUpdateLocation)
-    }
-
+    // パーミッションダイアログが操作された場合に呼び出されるコールバックメソッド
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
         grantResults: IntArray
     ) {
-        //
+
+        // ユーザ操作によって利用許可が下りていた場合
         if (requestCode == 1000 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            //
+
+            // アクティビティによるセルフパーミッションチェックの結果、
+            // 位置情報の利用が許可されていない場合の処理
             if (ActivityCompat.checkSelfPermission(
                     this@MainActivity,
                     Manifest.permission.ACCESS_FINE_LOCATION
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
-                //
-                _fusedLocationClient.requestLocationUpdates(
-                    _locationRequest,
-                    _onUpdateLocation,
-                    mainLooper
-                )
+                // 何も実行せずonRequestPermissionsResult()メソッドを終了
+                return
             }
+
+            // アクティビティによるセルフパーミッションチェックの結果、
+            // 位置情報の利用が許可されている場合の処理
+            // -> 位置情報を取得
+            _fusedLocationClient.requestLocationUpdates(
+                _locationRequest,
+                _onUpdateLocation,
+                mainLooper
+            )
         }
     }
 
-    //
+    // アクティビティの非表示直前に呼び出される処理
+    override fun onPause() {
+        super.onPause()
+
+        // 位置情報の取得を停止
+        _fusedLocationClient.removeLocationUpdates(_onUpdateLocation)
+    }
+
+    // 位置情報の取得処理終了時に呼び出される処理の実装クラス
     private inner class OnUpdateLocation: LocationCallback() {
-        //
-        override fun onLocationResult(p0: LocationResult?) {
-            //
-            p0?.let {
-                // LocationResultオブジェクトが保持する直近の位置情報
+
+        // 位置情報の取得処理終了時に呼び出される処理
+        override fun onLocationResult(result: LocationResult?) {
+
+            // 取得結果がnullでないことを保証
+            result?.let {
+
+                // 直近の位置情報を保持するlastLocationプロパティ
                 val location = it.lastLocation
 
+                // 直近の位置情報がnullでないことを保証
                 location?.let {
-                    // Locationオブジェクトが保持する経緯度
+
+                    // 直近の経緯度
                     _latitude = it.latitude
                     _longitude = it.longitude
 
-                    // 取得した経緯度を表示するTextView
+                    // 反映するTextView
                     val tvLatitude = findViewById<TextView>(R.id.tvLatitude)
                     val tvLongitude = findViewById<TextView>(R.id.tvLongitude)
 
-                    // TextViewへの経緯度の反映
+                    // 取得した経緯度の反映
                     tvLatitude.text = _latitude.toString()
                     tvLongitude.text = _longitude.toString()
                 }
@@ -141,50 +170,45 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Findボタンが押された場合の処理
+    // Findボタンが押された場合に呼び出される処理
     fun onMapSearchButtonClick(view: View) {
-        // EditTextビュー
+
+        // EditText
         val etSearchWord = findViewById<EditText>(R.id.etSearchWord)
 
-        // EditTextビューに入力されたString型文字列
+        // EditTextに入力された値
         var searchWord = etSearchWord.text.toString()
 
-        // 文字エンコードを指定したURLエンコーディング
-        // URLEncoder.encode(s:enc:): 文字エンコードを指定したURLエンコーディング
-        // URLEncoder: URLエンコーディングを行うメソッドを定義するクラス
-        // s: String型文字列
-        // enc: 文字エンコード
+        // URLエンコーディング
         searchWord = URLEncoder.encode(searchWord, "UTF-8")
 
-        // 地図アプリと連携するString型URI
-        // geo:y,x?q=<検索文字列>: 地図アプリで指定した文字列を検索するURI
-        // geo:: 地図アプリを表すURI
-        // y: 緯度の初期値
-        // x: 経度の初期値
+        // String型URI
         val uriStr = "geo:0,0?q=${searchWord}"
 
         // String型 → Uri型 への変換
         val uri = Uri.parse(uriStr)
 
-        // 暗黙的インテント(=Intentオブジェクト)の生成
+        // 指定したURIを表示するIntentオブジェクト
         val intent = Intent(Intent.ACTION_VIEW, uri)
 
-        // アクティビティの起動
+        // 画面遷移の実行
         startActivity(intent)
     }
 
-    // Showボタンが押された場合の処理
+    // Showボタンが押された場合に呼び出される処理
     fun onMapShowCurrentButtonClick(view: View) {
-        // 地図アプリと連携するString型URI
+
+        // String型URI
         val uriStr = "geo:${_latitude},${_longitude}"
 
         // String型 → Uri型 への変換
         val uri = Uri.parse(uriStr)
 
-        // 暗黙的インテント(=Intentオブジェクト)の生成
+        // 指定したURIを表示するIntentオブジェクト
         val intent = Intent(Intent.ACTION_VIEW, uri)
 
-        // アクティビティの起動
+        // 画面遷移の実行
         startActivity(intent)
     }
 }
+
